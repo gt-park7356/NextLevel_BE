@@ -18,7 +18,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Log4j2
 public class AuthService {
-    private final MemberRepository userRepository;
+    private final MemberRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
     private final JWTUtil jwtUtil;
 
@@ -27,15 +27,15 @@ public class AuthService {
 
     public Map<String, String> login(LoginDTO loginDTO, HttpServletResponse response) {
         // 1. 사용자 검증
-        Member user = userRepository.findByUsername(loginDTO.getUsername())
+        Member member = memberRepository.findByUsername(loginDTO.getUsername())
                 .orElseThrow(MemberException.NOT_FOUND::get);
 
-        if (!passwordEncoder.matches(loginDTO.getPassword(), user.getPassword())) {
+        if (!passwordEncoder.matches(loginDTO.getPassword(), member.getPassword())) {
             throw MemberException.BAD_CREDENTIALS.get();
         }
 
         // 2. 사용자 정보 가져오기
-        MemberDTO foundMemberDTO = new MemberDTO(user);
+        MemberDTO foundMemberDTO = new MemberDTO(member);
 
         // 3. 토큰 생성
         Map<String, Object> payloadMap = foundMemberDTO.getPayload();
