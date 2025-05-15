@@ -10,6 +10,7 @@ import com.example.NextLevel.domain.post.problem.dto.response.ProblemPostRespons
 import com.example.NextLevel.domain.post.problem.model.ProblemPost;
 import com.example.NextLevel.domain.post.problem.repository.ProblemPostRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
+@Log4j2
 public class ProblemPostServiceImpl implements ProblemPostService {
     private final ProblemPostRepository problemPostRepository;
     private final ProblemPostDataRepository problemPostDataRepository;
@@ -77,7 +79,8 @@ public class ProblemPostServiceImpl implements ProblemPostService {
     @Transactional
     public void delete(Long postId, String username) {
         ProblemPost post = problemPostRepository.findById(postId).orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
-        if(post.getMember().getUsername() != username) {
+        if(!post.getMember().getUsername().equals(username)) {
+            log.info("username : " + username + ", post.getMember().getUsername() : " + post.getMember().getUsername());
             throw new CustomException(ErrorCode.NOT_MATCHED_AUTHOR);
         }
 
