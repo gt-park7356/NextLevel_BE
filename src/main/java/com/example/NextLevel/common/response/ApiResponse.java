@@ -1,31 +1,28 @@
 package com.example.NextLevel.common.response;
 
+import com.example.NextLevel.common.exception.ErrorCode;
 import lombok.Getter;
 
 @Getter
 public class ApiResponse<T> {
-
-    private final String statusMessage;
+    private final boolean success;
+    private final String code;
+    private final String message;
     private final T data;
 
-    public ApiResponse(
-            final String statusMessage,
-            final T data
-    ) {
-        this.statusMessage = statusMessage;
-        this.data = data;
+    private ApiResponse(boolean success, String code, String message, T data) {
+        this.success = success;
+        this.code    = code;
+        this.message = message;
+        this.data    = data;
     }
 
-    public static <T> ApiResponse<T> success(final T data) {
-        return new ApiResponse<>(
-                "성공",
-                data
-        );
+    public static <T> ApiResponse<T> success(T data) {
+        return new ApiResponse<>(true, "OK", "성공", data);
     }
 
-    // ← 에러 응답용 메서드 추가
-    public static <T> ApiResponse<T> error(String statusMessage) {
-        return new ApiResponse<>(statusMessage, null);
+    public static <T> ApiResponse<T> error(ErrorCode ec) {
+        return new ApiResponse<>(false, ec.getCode(), ec.getMessage(), null);
     }
 
 }

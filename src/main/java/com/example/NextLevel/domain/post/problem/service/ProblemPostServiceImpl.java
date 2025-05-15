@@ -1,9 +1,10 @@
 package com.example.NextLevel.domain.post.problem.service;
 
+import com.example.NextLevel.common.exception.CustomException;
+import com.example.NextLevel.common.exception.ErrorCode;
 import com.example.NextLevel.common.upload.ProblemPostDataRepository;
 import com.example.NextLevel.domain.member.model.Member;
 import com.example.NextLevel.domain.member.service.MemberService;
-import com.example.NextLevel.domain.post.exception.PostException;
 import com.example.NextLevel.domain.post.problem.dto.request.ProblemPostRequest;
 import com.example.NextLevel.domain.post.problem.dto.response.ProblemPostResponse;
 import com.example.NextLevel.domain.post.problem.model.ProblemPost;
@@ -40,14 +41,14 @@ public class ProblemPostServiceImpl implements ProblemPostService {
             problemPostRepository.save(savedProblemPost);
             return new ProblemPostResponse(savedProblemPost);
         } catch (Exception e){
-            throw PostException.NOT_FOUND_EXCEPTION.getTaskException();
+            throw new CustomException(ErrorCode.INTERNAL_ERROR);
         }
     }
 
     //게시글 상세 조회
     @Override
     public ProblemPostResponse read(Long postId){
-        ProblemPost foundPost = problemPostRepository.findById(postId).orElseThrow(PostException.NOT_FOUND_EXCEPTION::getTaskException);
+        ProblemPost foundPost = problemPostRepository.findById(postId).orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
         return new ProblemPostResponse(foundPost);
     }
 
@@ -75,9 +76,9 @@ public class ProblemPostServiceImpl implements ProblemPostService {
     @Override
     @Transactional
     public void delete(Long postId, String username) {
-        ProblemPost post = problemPostRepository.findById(postId).orElseThrow(PostException.NOT_FOUND_EXCEPTION::getTaskException);
+        ProblemPost post = problemPostRepository.findById(postId).orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
         if(post.getMember().getUsername() != username) {
-            throw PostException.NOT_MATCHED_AUTHOR_EXCEPTION.getTaskException();
+            throw new CustomException(ErrorCode.NOT_MATCHED_AUTHOR);
         }
 
         problemPostRepository.deleteById(postId);
@@ -88,11 +89,11 @@ public class ProblemPostServiceImpl implements ProblemPostService {
     public ProblemPostResponse update(Long postId, ProblemPostRequest request, MultipartFile problemData, String username) {
         // 1) 게시글 조회
         ProblemPost post = problemPostRepository.findById(postId)
-                .orElseThrow(PostException.NOT_FOUND_EXCEPTION::getTaskException);
+                .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
 
         // 2) 작성자 검증
         if (!post.getMember().getUsername().equals(username)) {
-            throw PostException.NOT_MATCHED_AUTHOR_EXCEPTION.getTaskException();
+            throw new CustomException(ErrorCode.NOT_MATCHED_AUTHOR);
         }
 
         // 3) 파일 업로드 (새 파일이 있을 때만)
