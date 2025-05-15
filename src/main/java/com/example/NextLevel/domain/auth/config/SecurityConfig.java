@@ -31,7 +31,7 @@ public class SecurityConfig {
         http.csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeRequests(authorize -> authorize
-                    .requestMatchers("/api/auth/login", "/api/members/signup", "/api/posts", "/api/books/detail/{bookId}","/api/books", "/local_image_storage/**","/post_image_storage/**").permitAll()
+                    .requestMatchers("/api/auth/login", "/api/members/signup", "/api/problem-posts/all/**", "/api/problem-posts/search/**","/local_image_storage/**","/problem_post_data_storage/**").permitAll()
                 .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtCheckFilter, UsernamePasswordAuthenticationFilter.class)

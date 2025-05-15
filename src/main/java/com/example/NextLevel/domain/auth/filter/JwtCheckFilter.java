@@ -40,11 +40,10 @@ public class JwtCheckFilter extends OncePerRequestFilter {
         Set<String> excludedPaths = Set.of(
                 "/api/auth/login",
                 "/api/members/signup",
-                "/api/posts",
-                "/api/books",
+                "/api/problem-posts/all/**",
+                "/api/problem-posts/search/**",
                 "/local_image_storage/**",
-                "/post_image_storage/**",
-                "/api/books/detail/{bookId}",
+                "/problem_post_data_storage/**",
                 "/", "/static/**", "/index.html", "/css/**", "/js/**"
         );
 

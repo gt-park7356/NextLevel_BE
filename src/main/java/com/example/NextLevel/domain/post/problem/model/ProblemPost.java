@@ -31,4 +31,21 @@ public class ProblemPost extends BaseTimeEntity {
     @JoinColumn(name="member_id", nullable = false)
     private Member member;
 
+    public void update(
+            String title,
+            String content,
+            String professorName,
+            String school,
+            String subject,
+            String problemData
+    ) {
+        this.title = title;
+        this.content = content;
+        this.professorName = professorName;
+        this.school = school;
+        this.subject = subject;
+        if (problemData != null) {
+            this.problemData = problemData;
+        }
+    }
 }

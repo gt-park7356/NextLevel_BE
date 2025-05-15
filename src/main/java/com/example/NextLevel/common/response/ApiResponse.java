@@ -23,4 +23,9 @@ public class ApiResponse<T> {
         );
     }
 
+    // ← 에러 응답용 메서드 추가
+    public static <T> ApiResponse<T> error(String statusMessage) {
+        return new ApiResponse<>(statusMessage, null);
+    }
+
 }

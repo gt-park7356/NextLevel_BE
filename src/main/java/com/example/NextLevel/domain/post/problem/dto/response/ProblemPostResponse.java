@@ -13,20 +13,22 @@ import lombok.NoArgsConstructor;
 public class ProblemPostResponse {
     private String title;
     private String content;
+    private String author;
     private String professorName;
     private String school;
     private String subject;
-    private String problemData;
+    private String problemDataUrl;
     private String createdAt;
     private String updatedAt;
 
     public ProblemPostResponse(ProblemPost problemPost) {
         this.title = problemPost.getTitle();
         this.content = problemPost.getContent();
+        this.author = problemPost.getMember().getUsername();
         this.professorName = problemPost.getProfessorName();
         this.school = problemPost.getSchool();
         this.subject = problemPost.getSubject();
-        this.problemData = problemPost.getProblemData();
+        this.problemDataUrl = "/problem_post_data_storage/" +problemPost.getProblemData();
         this.createdAt = problemPost.getCreatedAt().toString();
         this.updatedAt = problemPost.getUpdatedAt().toString();
     }
