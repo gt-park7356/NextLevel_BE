@@ -1,5 +1,10 @@
 package com.example.NextLevel.domain.post.exception;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+
+@Getter
+@AllArgsConstructor
 public class PostTaskException extends RuntimeException {
     private final int statusCode;
 
