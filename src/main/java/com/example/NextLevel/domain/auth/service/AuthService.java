@@ -1,9 +1,10 @@
 package com.example.NextLevel.domain.auth.service;
 
+import com.example.NextLevel.common.exception.CustomException;
+import com.example.NextLevel.common.exception.ErrorCode;
 import com.example.NextLevel.domain.auth.dto.LoginDTO;
 import com.example.NextLevel.domain.auth.util.JWTUtil;
 import com.example.NextLevel.domain.member.dto.MemberDTO;
-import com.example.NextLevel.domain.member.exception.MemberException;
 import com.example.NextLevel.domain.member.model.Member;
 import com.example.NextLevel.domain.member.repository.MemberRepository;
 import jakarta.servlet.http.HttpServletResponse;
@@ -28,10 +29,10 @@ public class AuthService {
     public Map<String, String> login(LoginDTO loginDTO, HttpServletResponse response) {
         // 1. 사용자 검증
         Member member = memberRepository.findByUsername(loginDTO.getUsername())
-                .orElseThrow(MemberException.NOT_FOUND::get);
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_USER));
 
         if (!passwordEncoder.matches(loginDTO.getPassword(), member.getPassword())) {
-            throw MemberException.BAD_CREDENTIALS.get();
+            throw new CustomException(ErrorCode.NOT_MATCHED_PASSWORD);
         }
 
         // 2. 사용자 정보 가져오기

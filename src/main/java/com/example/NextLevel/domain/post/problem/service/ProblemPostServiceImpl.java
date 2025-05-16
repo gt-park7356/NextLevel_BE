@@ -1,14 +1,16 @@
 package com.example.NextLevel.domain.post.problem.service;
 
+import com.example.NextLevel.common.exception.CustomException;
+import com.example.NextLevel.common.exception.ErrorCode;
 import com.example.NextLevel.common.upload.ProblemPostDataRepository;
 import com.example.NextLevel.domain.member.model.Member;
 import com.example.NextLevel.domain.member.service.MemberService;
-import com.example.NextLevel.domain.post.exception.PostException;
 import com.example.NextLevel.domain.post.problem.dto.request.ProblemPostRequest;
 import com.example.NextLevel.domain.post.problem.dto.response.ProblemPostResponse;
 import com.example.NextLevel.domain.post.problem.model.ProblemPost;
 import com.example.NextLevel.domain.post.problem.repository.ProblemPostRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -18,6 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
+@Log4j2
 public class ProblemPostServiceImpl implements ProblemPostService {
     private final ProblemPostRepository problemPostRepository;
     private final ProblemPostDataRepository problemPostDataRepository;
@@ -40,14 +43,14 @@ public class ProblemPostServiceImpl implements ProblemPostService {
             problemPostRepository.save(savedProblemPost);
             return new ProblemPostResponse(savedProblemPost);
         } catch (Exception e){
-            throw PostException.NOT_FOUND_EXCEPTION.getTaskException();
+            throw new CustomException(ErrorCode.INTERNAL_ERROR);
         }
     }
 
     //게시글 상세 조회
     @Override
     public ProblemPostResponse read(Long postId){
-        ProblemPost foundPost = problemPostRepository.findById(postId).orElseThrow(PostException.NOT_FOUND_EXCEPTION::getTaskException);
+        ProblemPost foundPost = problemPostRepository.findById(postId).orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
         return new ProblemPostResponse(foundPost);
     }
 
@@ -75,9 +78,10 @@ public class ProblemPostServiceImpl implements ProblemPostService {
     @Override
     @Transactional
     public void delete(Long postId, String username) {
-        ProblemPost post = problemPostRepository.findById(postId).orElseThrow(PostException.NOT_FOUND_EXCEPTION::getTaskException);
-        if(post.getMember().getUsername() != username) {
-            throw PostException.NOT_MATCHED_AUTHOR_EXCEPTION.getTaskException();
+        ProblemPost post = problemPostRepository.findById(postId).orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
+        if(!post.getMember().getUsername().equals(username)) {
+            log.info("username : " + username + ", post.getMember().getUsername() : " + post.getMember().getUsername());
+            throw new CustomException(ErrorCode.NOT_MATCHED_AUTHOR);
         }
 
         problemPostRepository.deleteById(postId);
@@ -88,11 +92,11 @@ public class ProblemPostServiceImpl implements ProblemPostService {
     public ProblemPostResponse update(Long postId, ProblemPostRequest request, MultipartFile problemData, String username) {
         // 1) 게시글 조회
         ProblemPost post = problemPostRepository.findById(postId)
-                .orElseThrow(PostException.NOT_FOUND_EXCEPTION::getTaskException);
+                .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
 
         // 2) 작성자 검증
         if (!post.getMember().getUsername().equals(username)) {
-            throw PostException.NOT_MATCHED_AUTHOR_EXCEPTION.getTaskException();
+            throw new CustomException(ErrorCode.NOT_MATCHED_AUTHOR);
         }
 
         // 3) 파일 업로드 (새 파일이 있을 때만)

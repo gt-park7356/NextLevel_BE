@@ -1,5 +1,7 @@
 package com.example.NextLevel.domain.member.service;
 
+import com.example.NextLevel.common.exception.CustomException;
+import com.example.NextLevel.common.exception.ErrorCode;
 import com.example.NextLevel.common.upload.ImageRepository;
 import com.example.NextLevel.domain.member.dto.MemberDTO;
 import com.example.NextLevel.domain.member.dto.request.MemberSignUpRequest;
@@ -7,7 +9,6 @@ import com.example.NextLevel.domain.member.dto.request.MemberUpdateByAdminReques
 import com.example.NextLevel.domain.member.dto.request.MemberUpdateRequest;
 import com.example.NextLevel.domain.member.dto.response.MemberInfoByAdminResponse;
 import com.example.NextLevel.domain.member.dto.response.MemberInfoResponse;
-import com.example.NextLevel.domain.member.exception.MemberException;
 import com.example.NextLevel.domain.member.model.Member;
 import com.example.NextLevel.domain.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
@@ -35,8 +36,8 @@ public class MemberService {
     @Transactional
     public void signUp(final MemberSignUpRequest request, final MultipartFile profileImage) {
         // 중복 체크
-        if (memberRepository.existsByUsername(request.getUsername())) { throw MemberException.DUPLICATE_ID.get(); }
-        if (memberRepository.existsByEmail(request.getEmail())) { throw MemberException.DUPLICATE_EMAIL.get(); }
+        if (memberRepository.existsByUsername(request.getUsername())) { throw new CustomException(ErrorCode.DUPLICATE_MEMBER); }
+        if (memberRepository.existsByEmail(request.getEmail())) { throw new CustomException(ErrorCode.DUPLICATE_EMAIL); }
 
         // 프로필 이미지 처리
         String imageUrl = (profileImage != null && !profileImage.isEmpty())
@@ -51,33 +52,33 @@ public class MemberService {
     @Transactional
     public void updateMember(String userId, MemberUpdateRequest request) {
         Member foundMember = memberRepository.findByUsername(userId)
-                .orElseThrow(MemberException.NOT_FOUND::get);
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_USER));
 
         // 이메일 중복 체크
-        if (memberRepository.existsByEmail(request.getEmail())) { throw MemberException.DUPLICATE_EMAIL.get(); }
+        if (memberRepository.existsByEmail(request.getEmail())) { throw new CustomException(ErrorCode.DUPLICATE_EMAIL); }
 
         if(request.getEmail() != null) { foundMember.changeEmail(request.getEmail()); }
     }
 
     public MemberDTO findByUsername(String username) {
         Member member = memberRepository.findByUsername(username)
-                .orElseThrow(MemberException.NOT_FOUND::get);
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_USER));
         return new MemberDTO(member);
     }
 
     public void verifyCurrentPassword(String username, String currentPassword) {
         // 사용자 조회
-        Member member = memberRepository.findByUsername(username).orElseThrow(MemberException.NOT_FOUND::get);
+        Member member = memberRepository.findByUsername(username).orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_USER));
 
         if (!passwordEncoder.matches(currentPassword, member.getPassword())) {
-            throw MemberException.NOT_MATCHED_PASSWORD.get();
+            throw new CustomException(ErrorCode.NOT_MATCHED_PASSWORD);
         }
     }
 
     @Transactional  // 비밀번호 변경
     public void updatePassword(String username, String newPassword) {
         Member member = memberRepository.findByUsername(username)
-                .orElseThrow(MemberException.NOT_FOUND::get);
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_USER));
 
         // 새 비밀번호 변경
         member.changePassword(newPassword, passwordEncoder);
@@ -89,7 +90,7 @@ public class MemberService {
     public String updateProfileImage(String username, MultipartFile image) {
         // 사용자 조회
         Member member = memberRepository.findByUsername(username)
-                .orElseThrow(MemberException.NOT_FOUND::get);
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_USER));
 
         // 이미지가 제출되지 않았다면, 기존 이미지를 유지
         if (image == null && image.isEmpty()) {
@@ -108,14 +109,14 @@ public class MemberService {
     @Transactional        // 회원 탈퇴
     public void deleteMember(String username) {
         Member user = memberRepository.findByUsername(username)
-                .orElseThrow(MemberException.NOT_FOUND::get);
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_USER));
 
         memberRepository.delete(user);
     }
 
     public MemberInfoResponse getUserInfo(String username) {
         Member member = memberRepository.findByUsername(username)
-                .orElseThrow(MemberException.NOT_FOUND::get);
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_USER));
         return new MemberInfoResponse(member, uploadPath);
     }
 
@@ -125,14 +126,14 @@ public class MemberService {
 
     public MemberInfoByAdminResponse getUserInfoByAdmin(String username) {
         Member user = memberRepository.findByUsername(username)
-                .orElseThrow(MemberException.NOT_FOUND::get);
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_USER));
         return new MemberInfoByAdminResponse(user);
     }
 
     @Transactional
     public void updateUserByAdmin(String username, MemberUpdateByAdminRequest request) {
         Member foundMember = memberRepository.findByUsername(username)
-                .orElseThrow(MemberException.NOT_FOUND::get);
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_USER));
 
         // 요청바디에 있는 필드만 수정
         if(request.getEmail() != null) { foundMember.changeEmail(request.getEmail()); }
@@ -143,7 +144,7 @@ public class MemberService {
     //UserId로 찾고 Member를 반환
     public Member findUserByUsername(String username) {
             Member member = memberRepository.findByUsername(username)
-                .orElseThrow(MemberException.NOT_FOUND::get);
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_USER));
         return member;
     }
 }
