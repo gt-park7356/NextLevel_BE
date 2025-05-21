@@ -10,22 +10,6 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-//    @ExceptionHandler(MemberTaskException.class)
-//    public ResponseEntity<ApiResponse<Void>> handleMemberTask(MemberTaskException ex) {
-//        ApiResponse<Void> body = ApiResponse.error(ex.getMessage());
-//        return ResponseEntity
-//                .status(ex.getCode())
-//                .body(body);
-//    }
-//
-//    @ExceptionHandler(PostTaskException.class)
-//    public ResponseEntity<ApiResponse<Void>> handleMemberTask(PostTaskException ex) {
-//        ApiResponse<Void> body = ApiResponse.error(ex.getMessage());
-//        return ResponseEntity
-//                .status(ex.getStatusCode())
-//                .body(body);
-//    }
-
     // 비즈니스 예외
     @ExceptionHandler(CustomException.class)
     public ResponseEntity<ApiResponse<Void>> handleCustom(CustomException ex) {
