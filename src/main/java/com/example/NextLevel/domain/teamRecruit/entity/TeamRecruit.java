@@ -22,6 +22,21 @@ public class TeamRecruit {
 
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
+    
+    @Column(nullable = false)
+    private String school;
+
+    @Column(nullable = false)
+    private String department;
+
+    @Column(nullable = true)
+    private String professor;
+
+    @Column(nullable = true)
+    private String courseName;
+
+    @Column(nullable = true, columnDefinition = "TEXT")
+    private String description;
 
     @Column(nullable = false)
     private String author;  // username

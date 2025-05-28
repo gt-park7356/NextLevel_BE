@@ -22,6 +22,11 @@ public class TeamRecruitServiceImpl implements TeamRecruitService {
         TeamRecruit tr = repo.save(TeamRecruit.builder()
             .title(req.getTitle())
             .content(req.getContent())
+            .school(req.getSchool())
+            .department(req.getDepartment())
+            .professor(req.getProfessor())
+            .courseName(req.getCourseName())
+            .description(req.getDescription())
             .author(username)
             .build()
         );
@@ -57,6 +62,11 @@ public class TeamRecruitServiceImpl implements TeamRecruitService {
         }
         tr.setTitle(req.getTitle());
         tr.setContent(req.getContent());
+        tr.setSchool(req.getSchool());
+        tr.setDepartment(req.getDepartment());
+        tr.setProfessor(req.getProfessor());
+        tr.setCourseName(req.getCourseName());
+        tr.setDescription(req.getDescription());
         return TeamRecruitResponse.of(repo.save(tr));
     }
 

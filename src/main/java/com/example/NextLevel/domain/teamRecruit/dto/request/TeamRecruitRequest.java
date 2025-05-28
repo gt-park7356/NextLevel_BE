@@ -12,4 +12,14 @@ public class TeamRecruitRequest {
 
     @NotBlank(message = "내용은 반드시 입력하세요.")
     private String content;
+
+    @NotBlank(message = "학교명은 반드시 입력하세요.")
+    private String school;
+
+    @NotBlank(message = "학과명은 반드시 입력하세요.")
+    private String department;
+
+    private String professor;
+    private String courseName;
+    private String description;
 }
