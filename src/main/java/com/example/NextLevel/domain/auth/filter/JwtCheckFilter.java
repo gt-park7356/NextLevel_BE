@@ -23,97 +23,95 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@Log4j2
 @Component
 @RequiredArgsConstructor
-@Log4j2
 public class JwtCheckFilter extends OncePerRequestFilter {
-    private final JWTUtil jwtUtil;
 
+    private final JWTUtil jwtUtil;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
+    /** 토큰 검증을 아예 스킵할 URL 패턴들 */
+    private static final Set<String> WHITE_LIST = Set.of(
+        "/api/auth/login",
+        "/api/members/signup",
+        "/api/problem-posts/all/**",
+        "/api/problem-posts/search/**",
+        "/local_image_storage/**",
+        "/problem_post_data_storage/**",
+        "/", "/index.html", "/css/**", "/js/**", "/static/**"
+    );
+
     @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
-        log.info("--- shouldNotFilter()");
-        log.info("--- requestURI : " + request.getRequestURI());
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String uri    = request.getRequestURI();
+        String method = request.getMethod();
+        String base   = request.getContextPath(); // 보통 빈 문자열
 
-        // 제외할 경로 리스트
-        Set<String> excludedPaths = Set.of(
-                "/api/auth/login",
-                "/api/members/signup",
-                "/api/problem-posts/all/**",
-                "/api/problem-posts/search/**",
-                "/local_image_storage/**",
-                "/problem_post_data_storage/**",
-                "/", "/static/**", "/index.html", "/css/**", "/js/**"
-        );
+        // 1) actuator 는 전부 스킵
+        if (uri.startsWith(base + "/actuator/")) {
+            return true;
+        }
 
-        // 요청 URI가 제외할 경로 패턴에 매칭되면 필터링을 적용하지 않음
-        for (String path : excludedPaths) {
-            if (pathMatcher.match(path, request.getRequestURI())) {
+        // 2) 화이트리스트 패턴 스킵
+        for (String pattern : WHITE_LIST) {
+            if (pathMatcher.match(pattern, uri)) {
                 return true;
             }
         }
 
+        // 3) 팀모집 목록 조회(GET)만 스킵
+        if ("GET".equalsIgnoreCase(method)
+                && pathMatcher.match(base + "/api/team-recruits/**", uri)) {
+            return true;
+        }
+
+        // 그 외는 필터 적용
         return false;
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        log.info("--- doFilterInternal() ");
-        log.info("--- requestURI : " + request.getRequestURI());
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain)
+            throws ServletException, IOException {
 
-        // Authorization 헤더에서 액세스 토큰 읽기
         String headerAuth = request.getHeader("Authorization");
-        log.info("--- headerAuth : " + headerAuth);
+        log.debug("Authorization: {}", headerAuth);
 
-        //액세스 토큰이 없거나 'Bearer ' 가 아니면 403 예외 발생
-        if (headerAuth == null || !headerAuth.startsWith("Bearer ")) {   //Bearer 옆에 공백 필수 !
-            handleException(response, new Exception("ACCESS TOKEN NOT FOUND"));
+        if (headerAuth == null || !headerAuth.startsWith("Bearer ")) {
+            sendError(response, "ACCESS TOKEN NOT FOUND");
             return;
         }
 
-        // 토큰 유효성 검증 --------------------------------------
-        String accessToken = headerAuth.substring(7);  //"Bearer " 를 제외하고 토큰값 저장
-        try{
+        String accessToken = headerAuth.substring(7);
+        try {
             Map<String, Object> claims = jwtUtil.validateToken(accessToken);
-            log.info("--- 토큰 유효성 검증 완료 ---");
 
-            //SecurityContext 처리 ------------------------------------------
-            String username = claims.get("username").toString();
-            String roleString = claims.get("role").toString();
-            Role role = Role.valueOf(roleString);
+            String username = (String) claims.get("username");
+            Role role       = Role.valueOf((String) claims.get("role"));
 
-            Set<Role> authorities = role.getAuthorities();
+            List<GrantedAuthority> authorities = role.getAuthorities().stream()
+                .map(r -> new SimpleGrantedAuthority("ROLE_" + r.name()))
+                .collect(Collectors.toList());
 
-            authorities.forEach(authority -> log.info("beforeAuthority: " + authority.name()));
+            UsernamePasswordAuthenticationToken authToken =
+                new UsernamePasswordAuthenticationToken(
+                    new CustomUserDetails(username, authorities),
+                    null,
+                    authorities
+                );
+            SecurityContextHolder.getContext().setAuthentication(authToken);
 
-            // Spring Security의 권한 객체로 변환
-            List<GrantedAuthority> grantedAuthorities = authorities.stream()
-                    .map(r -> new SimpleGrantedAuthority("ROLE_" + r.name()))
-                    .collect(Collectors.toList());
-
-            grantedAuthorities.forEach(authority -> logger.info("Granted Authority: "+ authority.getAuthority()));
-
-            //토큰을 이용하여 인증된 정보 저장
-            setAuthentication(username, grantedAuthorities);
-
-            filterChain.doFilter(request, response); //검증 결과 문제가 없는 경우
-        }catch (Exception e) {
-            handleException(response, e);
+            filterChain.doFilter(request, response);
+        } catch (Exception e) {
+            sendError(response, e.getMessage());
         }
     }
 
-    private void setAuthentication(String username, List<GrantedAuthority> grantedAuthorities) {
-        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                new CustomUserDetails(username, grantedAuthorities), null, grantedAuthorities
-        );
-        SecurityContextHolder.getContext().setAuthentication(authToken);
-    }
-
-    public void handleException(HttpServletResponse response, Exception e) throws IOException {
+    private void sendError(HttpServletResponse response, String msg) throws IOException {
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);
         response.setContentType("application/json");
-        response.getWriter().println("{\"error\": \"" + e.getMessage() + "\"}");
+        response.getWriter().println("{\"error\":\"" + msg + "\"}");
     }
-
 }

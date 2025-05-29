@@ -4,6 +4,8 @@ import com.example.NextLevel.domain.auth.filter.JwtCheckFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -20,54 +22,80 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.List;
 
 @Configuration
-@RequiredArgsConstructor
 @EnableWebSecurity
 @EnableMethodSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
+
     private final JwtCheckFilter jwtCheckFilter;
 
+    /**
+     * 1) Actuator 전용 체인 (우선순위 1)
+     */
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http.csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeRequests(authorize -> authorize
-                    .requestMatchers("/api/auth/login", "/api/members/signup", "/api/problem-posts/all/**", "/api/problem-posts/search/**","/local_image_storage/**","/problem_post_data_storage/**").permitAll()
-                .anyRequest().authenticated()
-                )
-                .addFilterBefore(jwtCheckFilter, UsernamePasswordAuthenticationFilter.class)
-                .cors(cors -> {
-                    cors.configurationSource(corsConfigurationSource());
-                });
+    @Order(1)
+    public SecurityFilterChain actuatorSecurityChain(HttpSecurity http) throws Exception {
+        http
+          .securityMatcher("/actuator/**")
+          .csrf(AbstractHttpConfigurer::disable)
+          .authorizeHttpRequests(auth -> auth
+              .anyRequest().permitAll()
+          );
         return http.build();
     }
 
-    // CORS 설정 관련 메서드
+    /**
+     * 2) API 전용 체인 (우선순위 2)
+     */
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration corsConfig = new CorsConfiguration();
+    @Order(2)
+    public SecurityFilterChain apiSecurityChain(HttpSecurity http) throws Exception {
+        http
+          .securityMatcher("/api/**")
+          .csrf(AbstractHttpConfigurer::disable)
+          .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+          .authorizeHttpRequests(auth -> auth
+              // 인증 없이 열어둘 API
+              .requestMatchers(
+                  "/api/auth/login",
+                  "/api/members/signup",
+                  "/api/problem-posts/all/**",
+                  "/api/problem-posts/search/**",
+                  "/local_image_storage/**",
+                  "/problem_post_data_storage/**"
+              ).permitAll()
+              // GET만 공개할 경로
+              .requestMatchers(HttpMethod.GET, "/api/team-recruits/**").permitAll()
+              // 그 외 /api/** 는 JWT 인증
+              .anyRequest().authenticated()
+          )
+          // JWT 검사 필터
+          .addFilterBefore(jwtCheckFilter, UsernamePasswordAuthenticationFilter.class)
+          // 전역 CORS
+          .cors(cors -> cors.configurationSource(corsConfigurationSource()));
 
-        // 접근 패턴 - 모든 출처에서의 요청 허락
-        corsConfig.setAllowedOriginPatterns(List.of("*"));
-
-        // 허용 메서드
-        corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH"));
-
-        // 허용 헤더
-        corsConfig.addAllowedHeader("*");
-
-        // 자격 증명 허용 여부
-        corsConfig.setAllowCredentials(true);
-
-        // CORS 요청 시 Content-Type 허용
-        corsConfig.setAllowedHeaders(List.of("Content-Type", "Authorization"));
-
-        // URL 패턴 기반으로 CORS 구성
-        UrlBasedCorsConfigurationSource corsSource = new UrlBasedCorsConfigurationSource();
-        corsSource.registerCorsConfiguration("/**", corsConfig); // 모든 경로 적용
-
-        return corsSource;
+        return http.build();
     }
 
+    /**
+     * 전역 CORS 설정
+     */
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration cfg = new CorsConfiguration();
+        cfg.setAllowedOriginPatterns(List.of("*"));
+        cfg.setAllowedMethods(List.of("GET","POST","PUT","DELETE","PATCH"));
+        cfg.addAllowedHeader("*");
+        cfg.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource src = new UrlBasedCorsConfigurationSource();
+        src.registerCorsConfiguration("/**", cfg);
+        return src;
+    }
+
+    /**
+     * BCrypt 비밀번호 인코더
+     */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
